@@ -1,16 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Http;
+﻿namespace Domain.DTOs.CarDto;
 
-namespace Domain.Entities;
-
-public class Car : BaseEntities
+public class UpdateCarDto
 {
-    [Required]
+    public int Id { get; set; }
     public required string Brand { get; set; }
     public required string Model { get; set; }
     public int Year { get; set; }
     public decimal DailyPrice { get; set; }
-    public IFormFile? ImagePath { get; set; }
+    public string? ImagePath { get; set; }
     public bool IsAvailable { get; set; }
-    
 }
