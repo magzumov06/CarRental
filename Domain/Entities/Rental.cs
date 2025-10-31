@@ -11,4 +11,6 @@ public class Rental
     public DateTime EndDate { get; set; }
     public decimal TotalPrice { get; set; }
     public Status Status { get; set; }
+    public User? User { get; set; }
+    public Car? Car { get; set; }
 }

@@ -10,7 +10,8 @@ public class Car : BaseEntities
     public required string Model { get; set; }
     public int Year { get; set; }
     public decimal DailyPrice { get; set; }
-    public IFormFile? ImagePath { get; set; }
+    public string? ImagePath { get; set; }
     public bool IsAvailable { get; set; }
+    public List<Rental>? Rentals { get; set; }
     
 }

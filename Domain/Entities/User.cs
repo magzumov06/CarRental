@@ -12,5 +12,6 @@ public class User : IdentityUser<int>
     public string? ProfilePicture { get; set; }
     public Roles Role { get; set; }
     public DateTime CreatedDate { get; set; }
-    public DateTime ModifiedDate { get; set; }
+    public DateTime UpdatedDate { get; set; }
+    public List<Rental>? Rentals { get; set; }
 }

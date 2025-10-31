@@ -10,5 +10,6 @@ public static class ServiceRegister
     {
         services.AddScoped<IEmailSender, EmailSender>();
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<ICarService, CarService>();
     }
 }
