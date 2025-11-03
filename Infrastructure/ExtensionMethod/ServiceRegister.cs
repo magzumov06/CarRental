@@ -11,5 +11,7 @@ public static class ServiceRegister
         services.AddScoped<IEmailSender, EmailSender>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<ICarService, CarService>();
+        services.AddScoped<IRentalService, RentalService>();
+        services.AddScoped<IUserService, UserService>();
     }
 }

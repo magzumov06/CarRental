@@ -12,11 +12,8 @@ public class AccountController(IAccountService service) : ControllerBase
     public async Task<IActionResult> Register([FromForm] Register request)
     {
         var res = await service.RegisterAsync(request);
-        if (res.StatusCode != 200)
-        {
-            return BadRequest(res);
-        }
-        return Ok(res);
+        return StatusCode((int)res.StatusCode, res);
+
     }
 
 
@@ -24,10 +21,6 @@ public class AccountController(IAccountService service) : ControllerBase
     public async Task<IActionResult> Login([FromBody]Login request)
     {
         var res = await service.LoginAsync(request);
-        if (res.StatusCode != 200)
-        {
-            return BadRequest(res);
-        }
-        return Ok(res);
+        return StatusCode((int)res.StatusCode, res);
     }
 }

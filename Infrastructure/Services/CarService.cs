@@ -39,7 +39,7 @@ public class CarService(DataContext context,
         }
         catch (Exception e)
         {
-            return new Responce<string>(HttpStatusCode.InternalServerError,"Error");
+            return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
 
@@ -70,7 +70,7 @@ public class CarService(DataContext context,
         }
         catch (Exception e)
         {
-            return new Responce<string>(HttpStatusCode.InternalServerError,"Error");
+            return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
 
@@ -88,7 +88,7 @@ public class CarService(DataContext context,
         }
         catch (Exception e)
         {
-            return new Responce<string>(HttpStatusCode.InternalServerError,"Error");
+            return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
 
@@ -114,12 +114,67 @@ public class CarService(DataContext context,
         }
         catch (Exception e)
         {
-            return new Responce<GetCarDto>(HttpStatusCode.InternalServerError,"Error");
+            return new Responce<GetCarDto>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
 
-    public async Task<PaginationResponce<GetCarDto>> GetCars(CarFilter filter)
+    public async Task<PaginationResponce<List<GetCarDto>>> GetCars(CarFilter filter)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var query = context.Cars.AsQueryable();
+            if (filter.Id.HasValue)
+            {
+                query = query.Where(x => x.Id == filter.Id);
+            }
+
+            if (!string.IsNullOrEmpty(filter.Brand))
+            {
+                query = query.Where(x => x.Brand.Contains(filter.Brand));
+            }
+
+            if (!string.IsNullOrEmpty(filter.Model))
+            {
+                query = query.Where(x => x.Model.Contains(filter.Model));
+            }
+
+            if (filter.Year.HasValue)
+            {
+                query = query.Where(x => x.Year == filter.Year);
+            }
+
+            if (filter.DailyPrice.HasValue)
+            {
+                query = query.Where(x => x.DailyPrice == filter.DailyPrice);
+            }
+
+            if (filter.IsAvailable.HasValue)
+            {
+                query = query.Where(x => x.IsAvailable == filter.IsAvailable);
+            }
+
+            query = query.Where(x => x.IsDeleted == false);
+            var total = await query.CountAsync();
+            var skip = (filter.PageNumber - 1) * filter.PageSize;
+            var cars = await query.Skip(skip).Take(filter.PageSize).ToListAsync();
+            if(cars.Count ==  0) return new PaginationResponce<List<GetCarDto>>(HttpStatusCode.NotFound,"Cars not found");
+            var dtos = cars.Select(x=> new  GetCarDto()
+            {
+                Id = x.Id,
+                Brand = x.Brand,
+                Model = x.Model,
+                Year = x.Year,
+                DailyPrice = x.DailyPrice,
+                ImagePath = x.ImagePath,
+                IsAvailable = x.IsAvailable,
+                CreatedDate = x.CreatedDate,
+                UpdatedDate = x.UpdatedDate,
+            }).ToList();
+            return new PaginationResponce<List<GetCarDto>>(dtos, total,filter.PageNumber, filter.PageSize);
+        }
+        catch (Exception e)
+        {
+            return new PaginationResponce<List<GetCarDto>>(HttpStatusCode.InternalServerError,e.Message);
+        }
     }
 }

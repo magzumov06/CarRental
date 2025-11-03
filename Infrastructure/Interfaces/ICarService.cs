@@ -10,5 +10,5 @@ public interface ICarService
     Task<Responce<string>> UpdateCar(UpdateCarDto dto);
     Task<Responce<string>> DeleteCar(int id);
     Task<Responce<GetCarDto>> GetCarById(int id);
-    Task<PaginationResponce<GetCarDto>> GetCars(CarFilter filter);
+    Task<PaginationResponce<List<GetCarDto>>> GetCars(CarFilter filter);
 }

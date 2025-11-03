@@ -17,7 +17,7 @@ public static class IdentityRegister
                 opt.Password.RequireUppercase = false;
                 opt.Password.RequireLowercase = false;
                 opt.Password.RequireDigit = false;
-                opt.User.RequireUniqueEmail = false;
+                opt.User.RequireUniqueEmail = true;
             })
             .AddRoles<IdentityRole<int>>()
             .AddEntityFrameworkStores<DataContext>()

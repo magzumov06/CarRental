@@ -1,15 +1,14 @@
 ﻿using Domain.Enums;
 
-namespace Domain.Entities;
+namespace Domain.DTOs.RentalDto;
 
-public class Rental :  BaseEntities
+public class UpdateRentalDto
 {
+    public int Id { get; set; }
     public int UserId { get; set; }
     public int CarId { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public decimal TotalPrice { get; set; }
     public Status Status { get; set; }
-    public User? User { get; set; }
-    public Car? Car { get; set; }
 }
