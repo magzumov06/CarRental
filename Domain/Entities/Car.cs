@@ -13,5 +13,4 @@ public class Car : BaseEntities
     public string? ImagePath { get; set; }
     public bool IsAvailable { get; set; }
     public List<Rental>? Rentals { get; set; }
-    
 }

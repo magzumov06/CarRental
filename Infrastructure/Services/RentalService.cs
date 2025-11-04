@@ -5,6 +5,7 @@ using Domain.Responces;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 namespace Infrastructure.Services;
 
@@ -14,6 +15,7 @@ public class RentalService(DataContext context) : IRentalService
     {
         try
         {
+            Log.Information("Creating rental");
             var userExists = await context.Users.AnyAsync(x => x.Id == dto.UserId);
             if (!userExists)
                 return new Responce<string>(HttpStatusCode.NotFound, "User not found");
@@ -47,6 +49,7 @@ public class RentalService(DataContext context) : IRentalService
         }
         catch (Exception e)
         {
+            Log.Error("Error creating rental");
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
@@ -55,6 +58,7 @@ public class RentalService(DataContext context) : IRentalService
     {
         try
         {
+            Log.Information("Updating rental");
             var rental = await context.Rentals.FirstOrDefaultAsync(x=> x.Id == dto.Id);
             if (rental == null) return new Responce<string>(HttpStatusCode.NotFound, "Rental not found");
             rental.CarId = dto.CarId;
@@ -70,6 +74,7 @@ public class RentalService(DataContext context) : IRentalService
         }
         catch (Exception e)
         {
+            Log.Error("Error updating rental");
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
@@ -78,6 +83,7 @@ public class RentalService(DataContext context) : IRentalService
     {
         try
         {
+            Log.Information("Deleting rental");
             var rental = await context.Rentals.FirstOrDefaultAsync(x => x.Id == id);
             if (rental == null) return new Responce<string>(HttpStatusCode.NotFound, "Rental not found");
             context.Rentals.Remove(rental);
@@ -88,6 +94,7 @@ public class RentalService(DataContext context) : IRentalService
         }
         catch (Exception e)
         {
+            Log.Error("Error deleting rental");
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
@@ -96,6 +103,7 @@ public class RentalService(DataContext context) : IRentalService
     {
         try
         {
+            Log.Information("Getting rental");
             var rental = await context.Rentals.FirstOrDefaultAsync(x => x.Id == id);
             if(rental == null)  return new Responce<GetRentalDto>(HttpStatusCode.NotFound, "Rental not found");
             var dto = new GetRentalDto()
@@ -114,6 +122,7 @@ public class RentalService(DataContext context) : IRentalService
         }
         catch (Exception e)
         {
+            Log.Error("Error getting rental");
             return new Responce<GetRentalDto>(HttpStatusCode.InternalServerError, e.Message);
         }
     }

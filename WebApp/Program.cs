@@ -6,14 +6,31 @@ using Infrastructure.ExtensionMethod;
 using Infrastructure.FileStorage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//Serilog
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console(
+        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Debug)
+    .WriteTo.File(
+        "logs/log-.txt",
+        rollingInterval: RollingInterval.Day,
+        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .MinimumLevel.Debug()
+    .CreateLogger();
+
+//DataContext
 builder.Services.RegisterDataContext(builder.Configuration);
 
+//Identity
 builder.Services.RegisterIdentity();
 
+//Swagger
 builder.Services.RegisterSwagger();
+
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<IFileStorage>(sp => new FileStorage(builder.Environment.ContentRootPath));

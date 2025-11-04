@@ -9,6 +9,7 @@ using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Serilog;
 
 namespace Infrastructure.Services;
 
@@ -24,6 +25,7 @@ public class AccountService(
     {
         try
         {
+            Log.Information("Registering account");
             var existingUser = await userManager.FindByNameAsync(register.UserName);
             if (existingUser != null)
                 return new Responce<string>(HttpStatusCode.BadRequest, "User already exists");
@@ -32,7 +34,10 @@ public class AccountService(
                 return new Responce<string>(HttpStatusCode.BadRequest, "Email already exists");
             var user = new User
             {
-                FullName = register.FullName, UserName = register.UserName, Email = register.Email,
+                FullName = register.FullName,
+                UserName = register.UserName, 
+                Email = register.Email,
+                CreatedDate = DateTime.UtcNow,
             };
             if (register.ProfilePicture != null)
             {
@@ -52,8 +57,10 @@ public class AccountService(
         }
         catch (Exception e)
         {
+            Log.Error("Error in creating account");
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
-        }    }
+        }    
+    }
     public async Task<Responce<string>> LoginAsync(Login login)
     {
         try

@@ -7,6 +7,7 @@ using Infrastructure.Data;
 using Infrastructure.FileStorage;
 using Infrastructure.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 namespace Infrastructure.Services;
 
@@ -17,6 +18,7 @@ public class CarService(DataContext context,
     {
         try
         {
+            Log.Information("Adding car");
             var newCar = new Car()
             {
                 Brand = dto.Brand,
@@ -39,6 +41,7 @@ public class CarService(DataContext context,
         }
         catch (Exception e)
         {
+            Log.Error("Error in creating car");
             return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
@@ -47,6 +50,7 @@ public class CarService(DataContext context,
     {
         try
         {
+            Log.Information("Updating car");
             var car = await context.Cars.FirstOrDefaultAsync(x=> x.Id == dto.Id);
             if(car == null) return new Responce<string>(HttpStatusCode.NotFound,"Car not found");
             car.Brand = dto.Brand;
@@ -70,6 +74,7 @@ public class CarService(DataContext context,
         }
         catch (Exception e)
         {
+            Log.Error("Error in creating car");
             return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
@@ -78,6 +83,7 @@ public class CarService(DataContext context,
     {
         try
         {
+            Log.Information("Deleting car");
             var car = await context.Cars.FirstOrDefaultAsync(x => x.Id == id);
             if(car == null) return new Responce<string>(HttpStatusCode.NotFound,"Car not found");
             context.Cars.Remove(car);
@@ -88,6 +94,7 @@ public class CarService(DataContext context,
         }
         catch (Exception e)
         {
+            Log.Error("Error in deleting car");
             return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
@@ -96,6 +103,7 @@ public class CarService(DataContext context,
     {
         try
         {
+            Log.Information("Getting car");
             var car = await context.Cars.FirstOrDefaultAsync(x => x.Id == id);
             if(car == null) return new Responce<GetCarDto>(HttpStatusCode.NotFound,"Car not found");
             var res = new GetCarDto()
@@ -114,6 +122,7 @@ public class CarService(DataContext context,
         }
         catch (Exception e)
         {
+            Log.Error("Error in getting car");
             return new Responce<GetCarDto>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
@@ -122,6 +131,7 @@ public class CarService(DataContext context,
     {
         try
         {
+            Log.Information("Getting cars");
             var query = context.Cars.AsQueryable();
             if (filter.Id.HasValue)
             {
@@ -174,6 +184,7 @@ public class CarService(DataContext context,
         }
         catch (Exception e)
         {
+            Log.Error("Error in getting cars");
             return new PaginationResponce<List<GetCarDto>>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
