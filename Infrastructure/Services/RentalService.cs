@@ -4,6 +4,7 @@ using Domain.Entities;
 using Domain.Responces;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -11,6 +12,8 @@ namespace Infrastructure.Services;
 
 public class RentalService(DataContext context) : IRentalService
 {
+    
+    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<string>> CreateRental(CreateRentalDto dto)
     {
         try
@@ -54,6 +57,8 @@ public class RentalService(DataContext context) : IRentalService
         }
     }
     
+    
+    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<string>> UpdateRental(UpdateRentalDto dto)
     {
         try
@@ -79,6 +84,7 @@ public class RentalService(DataContext context) : IRentalService
         }
     }
 
+    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<string>> DeleteRental(int id)
     {
         try
@@ -99,6 +105,7 @@ public class RentalService(DataContext context) : IRentalService
         }
     }
 
+    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<GetRentalDto>> GetRental(int id)
     {
         try
