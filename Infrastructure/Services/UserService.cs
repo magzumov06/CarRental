@@ -13,7 +13,6 @@ namespace Infrastructure.Services;
 public class UserService(DataContext context,
     IFileStorage file) : IUserService
 {
-    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<string>> UpdateUser(UpdateUserDto dto)
     {
         try
@@ -41,7 +40,6 @@ public class UserService(DataContext context,
         }
     }
     
-    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<string>> DeleteUser(int id)
     {
         try
@@ -60,7 +58,6 @@ public class UserService(DataContext context,
         }
     }
 
-    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<GetUserDto>> GetUserById(int id)
     {
         try
@@ -84,7 +81,6 @@ public class UserService(DataContext context,
         }
     }
 
-    [Authorize(Roles = "Admin")]
     public async Task<PaginationResponce<List<GetUserDto>>> GetAllUsers(UserFilter filter)
     {
         try

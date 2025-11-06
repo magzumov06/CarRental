@@ -1,13 +1,16 @@
 ﻿using System.Net;
+using System.Security.Claims;
 using Domain.DTOs.Account;
 using Domain.DTOs.EmailDto;
 using Domain.Entities;
 using Domain.Responces;
+using Infrastructure.Data;
 using Infrastructure.FileStorage;
 using Infrastructure.Helpers;
 using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 
@@ -15,7 +18,7 @@ namespace Infrastructure.Services;
 
 public class AccountService(
     UserManager<User> userManager,
-    IHttpContextAccessor  contextAccessor,
+    DataContext context,
     IConfiguration  configuration,
     IEmailSender emailSender,
     IFileStorage file
@@ -78,4 +81,23 @@ public class AccountService(
         {
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
         }    }
+
+    public async Task<Responce<string>> ChangePassword(ChangePassword changePassword)
+    {
+        try
+        {
+            var user = await context.Users.FirstOrDefaultAsync(x => x.Id == changePassword.UserId);
+            if(user == null) return new Responce<string>(HttpStatusCode.NotFound, "User not found");
+            
+            var res = await userManager.ChangePasswordAsync(user, changePassword.OldPassword, changePassword.NewPassword);
+            
+            if(!res.Succeeded)
+                return new Responce<string>(HttpStatusCode.BadRequest, "Old password went wrong");
+            return new Responce<string>(HttpStatusCode.OK,"Password changed");
+        }
+        catch (Exception e)
+        {
+            return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
+        }
+    }
 }

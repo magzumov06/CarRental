@@ -23,4 +23,11 @@ public class AccountController(IAccountService service) : ControllerBase
         var res = await service.LoginAsync(request);
         return StatusCode((int)res.StatusCode, res);
     }
+
+    [HttpPut]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePassword request)
+    {
+        var res =  await service.ChangePassword(request);
+        return StatusCode((int)res.StatusCode, res);
+    }
 }

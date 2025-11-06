@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Domain.DTOs.RentalDto;
 using Domain.Entities;
+using Domain.Filters;
 using Domain.Responces;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
@@ -13,7 +14,6 @@ namespace Infrastructure.Services;
 public class RentalService(DataContext context) : IRentalService
 {
     
-    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<string>> CreateRental(CreateRentalDto dto)
     {
         try
@@ -58,7 +58,6 @@ public class RentalService(DataContext context) : IRentalService
     }
     
     
-    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<string>> UpdateRental(UpdateRentalDto dto)
     {
         try
@@ -84,7 +83,6 @@ public class RentalService(DataContext context) : IRentalService
         }
     }
 
-    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<string>> DeleteRental(int id)
     {
         try
@@ -105,7 +103,6 @@ public class RentalService(DataContext context) : IRentalService
         }
     }
 
-    [Authorize(Roles = "Admin,User")]
     public async Task<Responce<GetRentalDto>> GetRental(int id)
     {
         try
@@ -131,6 +128,56 @@ public class RentalService(DataContext context) : IRentalService
         {
             Log.Error("Error getting rental");
             return new Responce<GetRentalDto>(HttpStatusCode.InternalServerError, e.Message);
+        }
+    }
+
+    public async Task<PaginationResponce<List<GetRentalDto>>> GetRentals(RentalFilter filter)
+    {
+        try
+        {
+            var query = context.Rentals.AsQueryable();
+            if (filter.Id.HasValue)
+            {
+                query = query.Where(x => x.Id == filter.Id.Value);
+            }
+
+            if (filter.CarId.HasValue)
+            {
+                query = query.Where(x => x.CarId == filter.CarId.Value);
+            }
+
+            if (filter.TotalPrice.HasValue)
+            {
+                query = query.Where(x => x.TotalPrice >= filter.TotalPrice.Value);
+            }
+
+            if (filter.Status.HasValue)
+            {
+                query = query.Where(x => x.Status == filter.Status.Value);
+            }
+            
+            var total = await query.CountAsync();
+            var skip = (filter.PageNumber - 1) * filter.PageSize;
+            var rental = await query.OrderBy(x => x.Id).Skip(skip).Take(filter.PageSize).ToListAsync();
+            if(rental.Count == 0) return new PaginationResponce<List<GetRentalDto>>(HttpStatusCode.NotFound, "Rental not found");
+            var dtos = rental.Select(x => new GetRentalDto()
+            {
+                Id = x.Id,
+                CarId = x.CarId,
+                UserId = x.UserId,
+                StartDate = x.StartDate,
+                EndDate = x.EndDate,
+                TotalPrice = x.TotalPrice,
+                Status = x.Status,
+                CreatedDate = x.CreatedDate,
+                UpdatedDate = x.UpdatedDate,
+            }).ToList();
+            return new PaginationResponce<List<GetRentalDto>>(dtos,total,filter.PageNumber,filter.PageSize);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
         }
     }
 }

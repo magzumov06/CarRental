@@ -7,4 +7,5 @@ public interface IAccountService
 {
     Task<Responce<string>> RegisterAsync(Register register);
     Task<Responce<string>> LoginAsync(Login login);
+    Task<Responce<string>> ChangePassword(ChangePassword changePassword);
 }

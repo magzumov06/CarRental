@@ -1,5 +1,7 @@
 ﻿using Domain.DTOs.RentalDto;
+using Domain.Filters;
 using Infrastructure.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApp.Controller;
@@ -35,6 +37,14 @@ public class RentalController(IRentalService service) :  ControllerBase
     public async Task<IActionResult> GetRental(int id)
     {
         var res = await service.GetRental(id);
+        return StatusCode((int)res.StatusCode, res);
+    }
+
+    [HttpGet]
+
+    public async Task<IActionResult> GetRentals([FromQuery]RentalFilter filter)
+    {
+        var res =  await service.GetRentals(filter);
         return StatusCode((int)res.StatusCode, res);
     }
 }

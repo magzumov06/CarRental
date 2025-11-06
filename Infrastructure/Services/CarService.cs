@@ -16,7 +16,6 @@ public class CarService(DataContext context,
     IFileStorage file) : ICarService
 {
     
-    [Authorize(Roles = "Admin")]
     public async Task<Responce<string>> AddCar(AddCarDto dto)
     {
         try
@@ -49,7 +48,6 @@ public class CarService(DataContext context,
         }
     }
 
-    [Authorize(Roles = "Admin")]
     public async Task<Responce<string>> UpdateCar(UpdateCarDto dto)
     {
         try
@@ -82,7 +80,6 @@ public class CarService(DataContext context,
             return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
-    [Authorize(Roles = "Admin")]
     public async Task<Responce<string>> DeleteCar(int id)
     {
         try
@@ -103,7 +100,6 @@ public class CarService(DataContext context,
         }
     }
 
-    [Authorize]
     public async Task<Responce<GetCarDto>> GetCarById(int id)
     {
         try
@@ -132,7 +128,6 @@ public class CarService(DataContext context,
         }
     }
 
-    [Authorize]
     public async Task<PaginationResponce<List<GetCarDto>>> GetCars(CarFilter filter)
     {
         try
