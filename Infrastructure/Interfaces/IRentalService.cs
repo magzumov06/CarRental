@@ -6,9 +6,10 @@ namespace Infrastructure.Interfaces;
 
 public interface IRentalService
 {
-    Task<Responce<string>> CreateRental(CreateRentalDto dto);
-    Task<Responce<string>> UpdateRental(UpdateRentalDto dto);
-    Task<Responce<string>> DeleteRental(int id);
+    Task<Responce<string>> CreateRental(CreateRentalDto dto,int userId);
+    Task<Responce<string>> UpdateRental(UpdateRentalDto dto, int userId);
+    Task<Responce<string>> DeleteRental(int id, int userId);
     Task<Responce<GetRentalDto>> GetRental(int id);
-    Task<PaginationResponce<List<GetRentalDto>>> GetRentals(RentalFilter filter);
+    Task<PaginationResponce<List<GetRentalDto>>> GetRentals(RentalFilter filter); 
+    Task MarkExpiredRentalsAsCompleted();
 }

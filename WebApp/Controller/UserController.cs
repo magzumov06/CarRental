@@ -17,7 +17,6 @@ public class UserController(IUserService service) : ControllerBase
     }
 
     [HttpDelete]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteUser(int id)
     {
         var res = await service.DeleteUser(id);
@@ -32,7 +31,6 @@ public class UserController(IUserService service) : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetUsers([FromQuery]UserFilter filter)
     {
         var res = await service.GetAllUsers(filter);

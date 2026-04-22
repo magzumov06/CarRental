@@ -34,6 +34,7 @@ public class CarService(DataContext context,
             if (dto.ImagePath != null)
             {
                 newCar.ImagePath = await file.UploadFile(dto.ImagePath,"CarImage");
+                Console.WriteLine(newCar.ImagePath);
             }
             await context.Cars.AddAsync(newCar);
             var res = await context.SaveChangesAsync();

@@ -11,8 +11,6 @@ namespace WebApp.Controller;
 public class CarController(ICarService service) : ControllerBase
 {
     [HttpPost]
-    [Authorize(Roles = "Admin")]
-
     public async Task<IActionResult> AddCar([FromForm] AddCarDto dto)
     {
         var res =  await service.AddCar(dto);
@@ -21,7 +19,6 @@ public class CarController(ICarService service) : ControllerBase
 
     [HttpPut]
     [Authorize(Roles = "Admin")]
-
     public async Task<IActionResult> UpdateCar([FromForm] UpdateCarDto dto)
     {
         var res = await service.UpdateCar(dto);
@@ -30,7 +27,6 @@ public class CarController(ICarService service) : ControllerBase
 
     [HttpDelete]
     [Authorize(Roles = "Admin")]
-
     public async Task<IActionResult> Delete(int id)
     {
         var res = await service.DeleteCar(id);

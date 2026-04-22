@@ -1,14 +1,22 @@
 using Domain.DTOs.EmailDto;
 using Domain.Entities;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Infrastructure.Data;
 using Infrastructure.Data.Seeder;
 using Infrastructure.ExtensionMethod;
 using Infrastructure.FileStorage;
+using Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//HangFire
+builder.Services.AddHangfire(config =>
+    config.UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddHangfireServer();
 
 //Serilog
 Log.Logger = new LoggerConfiguration()
@@ -52,6 +60,18 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.MapControllers();
+
+app.UseAuthorization();
+app.UseAuthentication();
+
+app.UseHangfireDashboard("/hangfire");
+
+
+RecurringJob.AddOrUpdate<IRentalService>(
+    "complete-expired-rentals",
+    x => x.MarkExpiredRentalsAsCompleted(),
+    Cron.Daily(8)
+);
 
 using (var scope = app.Services.CreateScope())
 {

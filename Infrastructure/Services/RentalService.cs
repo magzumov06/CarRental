@@ -1,11 +1,11 @@
 ﻿using System.Net;
 using Domain.DTOs.RentalDto;
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Filters;
 using Domain.Responces;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -14,30 +14,39 @@ namespace Infrastructure.Services;
 public class RentalService(DataContext context) : IRentalService
 {
     
-    public async Task<Responce<string>> CreateRental(CreateRentalDto dto)
+    public async Task<Responce<string>> CreateRental(CreateRentalDto dto, int  userId)
     {
         try
         {
             Log.Information("Creating rental");
-            var userExists = await context.Users.AnyAsync(x => x.Id == dto.UserId);
+
+            var userExists = await context.Users.AnyAsync(x => x.Id == userId);
             if (!userExists)
                 return new Responce<string>(HttpStatusCode.NotFound, "User not found");
 
             var car = await context.Cars.FirstOrDefaultAsync(x => x.Id == dto.CarId);
             if (car == null)
                 return new Responce<string>(HttpStatusCode.NotFound, "Car not found");
-            
-            if (dto.StartDate > dto.EndDate)
-                return new Responce<string>(HttpStatusCode.BadRequest, "End date must be after start date");
-            
+
+            if (dto.StartDate >= dto.EndDate)
+                return new Responce<string>(HttpStatusCode.BadRequest, "Invalid rental period");
+
+            var hasConflict = await context.Rentals.AnyAsync(x =>
+                x.CarId == dto.CarId &&
+                x.StartDate < dto.EndDate &&
+                x.EndDate > dto.StartDate);
+
+            if (hasConflict)
+                return new Responce<string>(HttpStatusCode.BadRequest, "Car already rented for this period");
+
             var days = (dto.EndDate - dto.StartDate).TotalDays;
-            if(days < 1) days = 1;
+            if (days < 1) days = 1;
 
             var totalPrice = (decimal)days * car.DailyPrice;
 
-            var newRental = new Rental
+            var rental = new Rental
             {
-                UserId = dto.UserId,
+                UserId = userId,
                 CarId = dto.CarId,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
@@ -46,32 +55,57 @@ public class RentalService(DataContext context) : IRentalService
                 CreatedDate = DateTime.UtcNow,
                 UpdatedDate = DateTime.UtcNow
             };
-            await context.Rentals.AddAsync(newRental);
+            await context.Rentals.AddAsync(rental);
             await context.SaveChangesAsync();
-            return new Responce<string>(HttpStatusCode.Created, "Rental has been created successfully");
+            return new Responce<string>(HttpStatusCode.Created, "Rental created successfully");
         }
         catch (Exception e)
         {
-            Log.Error("Error creating rental");
-            return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
+            Log.Error(e, "Error creating rental for UserId {userId}", userId);
+            return new Responce<string>(HttpStatusCode.InternalServerError, "Internal server error");
         }
     }
     
     
-    public async Task<Responce<string>> UpdateRental(UpdateRentalDto dto)
+    public async Task<Responce<string>> UpdateRental(UpdateRentalDto dto, int userId)
     {
         try
         {
             Log.Information("Updating rental");
+            
             var rental = await context.Rentals.FirstOrDefaultAsync(x=> x.Id == dto.Id);
-            if (rental == null) return new Responce<string>(HttpStatusCode.NotFound, "Rental not found");
+            
+            if (rental == null) 
+                return new Responce<string>(HttpStatusCode.NotFound, "Rental not found");
+            
+            var car = await context.Cars.FirstOrDefaultAsync(x => x.Id == dto.CarId);
+            if (car == null)
+                return new Responce<string>(HttpStatusCode.NotFound, "Car not found");
+
+            if (dto.StartDate >= dto.EndDate)
+                return new Responce<string>(HttpStatusCode.BadRequest, "Invalid rental period");
+
+            var hasConflict = await context.Rentals.AnyAsync(x =>
+                x.CarId == dto.CarId &&
+                x.Id != dto.Id &&
+                x.StartDate < dto.EndDate &&
+                x.EndDate > dto.StartDate);
+
+            if (hasConflict)
+                return new Responce<string>(HttpStatusCode.BadRequest, "Car already rented");
+
+            var days = (dto.EndDate - dto.StartDate).TotalDays;
+            if (days < 1) days = 1;
+
+            
             rental.CarId = dto.CarId;
             rental.StartDate = dto.StartDate;
+            rental.TotalPrice = (decimal)days * car.DailyPrice;
             rental.EndDate = dto.EndDate;
-            rental.TotalPrice = dto.TotalPrice;
             rental.Status = dto.Status;
             rental.UpdatedDate = DateTime.UtcNow;
             var res = await context.SaveChangesAsync();
+            
             return res > 0
                 ? new Responce<string>(HttpStatusCode.OK, "Rental has been updated")
                 : new Responce<string>(HttpStatusCode.BadRequest, "Rental could not be updated");
@@ -83,14 +117,16 @@ public class RentalService(DataContext context) : IRentalService
         }
     }
 
-    public async Task<Responce<string>> DeleteRental(int id)
+    public async Task<Responce<string>> DeleteRental(int id, int userId)
     {
         try
         {
             Log.Information("Deleting rental");
             var rental = await context.Rentals.FirstOrDefaultAsync(x => x.Id == id);
             if (rental == null) return new Responce<string>(HttpStatusCode.NotFound, "Rental not found");
-            context.Rentals.Remove(rental);
+            rental.IsDeleted = true;
+            rental.UpdatedDate = DateTime.UtcNow;
+            
             var res = await context.SaveChangesAsync();
             return res > 0
                 ? new Responce<string>(HttpStatusCode.OK, "Rental has been deleted")
@@ -108,8 +144,9 @@ public class RentalService(DataContext context) : IRentalService
         try
         {
             Log.Information("Getting rental");
-            var rental = await context.Rentals.FirstOrDefaultAsync(x => x.Id == id);
-            if(rental == null)  return new Responce<GetRentalDto>(HttpStatusCode.NotFound, "Rental not found");
+            var rental = await context.Rentals.FirstOrDefaultAsync(x => x.Id == id && x.IsDeleted == false);
+            if(rental == null)  
+                return new Responce<GetRentalDto>(HttpStatusCode.NotFound, "Rental not found");
             var dto = new GetRentalDto()
             {
                 Id = rental.Id,
@@ -155,7 +192,7 @@ public class RentalService(DataContext context) : IRentalService
             {
                 query = query.Where(x => x.Status == filter.Status.Value);
             }
-            
+            query = query.Where(x => x.IsDeleted == false);
             var total = await query.CountAsync();
             var skip = (filter.PageNumber - 1) * filter.PageSize;
             var rental = await query.OrderBy(x => x.Id).Skip(skip).Take(filter.PageSize).ToListAsync();
@@ -176,8 +213,19 @@ public class RentalService(DataContext context) : IRentalService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            throw;
+            return new PaginationResponce<List<GetRentalDto>>(HttpStatusCode.InternalServerError, e.Message);
         }
+    }
+    
+    public async Task MarkExpiredRentalsAsCompleted()
+    {
+        var now = DateTime.UtcNow;
+
+        await context.Rentals
+            .Where(x => x.EndDate <= now && x.Status == Status.Active)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.Status, Status.Completed)
+                .SetProperty(x  => x.UpdatedDate, DateTime.UtcNow)
+            );
     }
 }
