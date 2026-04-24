@@ -15,12 +15,32 @@ namespace Infrastructure.Services;
 public class CarService(DataContext context,
     IFileStorage file) : ICarService
 {
-    
+    #region MAPPER
+    private static GetCarDto MapToDto(Car x)
+    {
+        return new GetCarDto
+        {
+            Id = x.Id,
+            Brand = x.Brand,
+            Model = x.Model,
+            Year = x.Year,
+            DailyPrice = x.DailyPrice,
+            ImagePath = x.ImagePath,
+            IsAvailable = x.IsAvailable,
+            CreatedDate = x.CreatedDate,
+            UpdatedDate = x.UpdatedDate,
+        };
+    }
+    #endregion
+
+    #region AddCar
     public async Task<Responce<string>> AddCar(AddCarDto dto)
     {
+        await using var transaction = await context.Database.BeginTransactionAsync();
         try
         {
             Log.Information("Adding car");
+            
             var newCar = new Car()
             {
                 Brand = dto.Brand,
@@ -34,27 +54,90 @@ public class CarService(DataContext context,
             if (dto.ImagePath != null)
             {
                 newCar.ImagePath = await file.UploadFile(dto.ImagePath,"CarImage");
-                Console.WriteLine(newCar.ImagePath);
             }
             await context.Cars.AddAsync(newCar);
             var res = await context.SaveChangesAsync();
+            
+            await transaction.CommitAsync();
+            
             return res > 0
                 ? new Responce<string>(HttpStatusCode.Created,"Car added successfully")
                 : new Responce<string>(HttpStatusCode.BadRequest,"Error");
         }
         catch (Exception e)
         {
+            await transaction.RollbackAsync();
             Log.Error("Error in creating car");
             return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
+    #endregion
 
+    #region AddRangeCar
+    public async Task<Responce<string>> AddCars(List<AddCarDto> dtos)
+    {
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var uploadedFiles = new List<string>();
+
+        try
+        {
+            Log.Information("Adding multiple cars {@count}", dtos.Count);
+
+            var cars = new List<Car>();
+
+            foreach (var dto in dtos)
+            {
+                var car = new Car
+                {
+                    Brand = dto.Brand,
+                    Model = dto.Model,
+                    Year = dto.Year,
+                    DailyPrice = dto.DailyPrice,
+                    IsAvailable = dto.IsAvailable,
+                    CreatedDate = DateTime.UtcNow,
+                    UpdatedDate = DateTime.UtcNow,
+                };
+
+                if (dto.ImagePath != null)
+                {
+                    var filePath = await file.UploadFile(dto.ImagePath, "CarImage");
+                    car.ImagePath = filePath;
+                    uploadedFiles.Add(filePath);
+                }
+
+                cars.Add(car);
+            }
+
+            await context.Cars.AddRangeAsync(cars);
+            await context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+
+            return new Responce<string>(HttpStatusCode.Created, $"{cars.Count} cars added successfully");
+        }
+        catch (Exception e)
+        {
+            await transaction.RollbackAsync();
+            
+            foreach (var path in uploadedFiles)
+            {
+                await file.DeleteFile(path);
+            }
+
+            Log.Error(e, "Error while adding multiple cars");
+            return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
+        }
+    }
+    #endregion
+    
+    #region UpdateCar
     public async Task<Responce<string>> UpdateCar(UpdateCarDto dto)
     {
+        await using var transaction = await context.Database.BeginTransactionAsync();
         try
         {
             Log.Information("Updating car");
-            var car = await context.Cars.FirstOrDefaultAsync(x=> x.Id == dto.Id);
+            var car = await context.Cars.FirstOrDefaultAsync(x=> x.Id == dto.Id && !x.IsDeleted);
             if(car == null) return new Responce<string>(HttpStatusCode.NotFound,"Car not found");
             car.Brand = dto.Brand;
             car.Model = dto.Model;
@@ -71,56 +154,69 @@ public class CarService(DataContext context,
             }
             car.UpdatedDate = DateTime.UtcNow;
             var res = await context.SaveChangesAsync();
+            
+            await transaction.CommitAsync();
+            
             return res > 0
                 ? new Responce<string>(HttpStatusCode.OK,"Car updated successfully")
                 : new Responce<string>(HttpStatusCode.BadRequest,"Error");
         }
         catch (Exception e)
         {
+            await transaction.RollbackAsync();
             Log.Error("Error in creating car");
             return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
+    #endregion
+    
+    #region DeleteCar
     public async Task<Responce<string>> DeleteCar(int id)
     {
+        await using var transaction = await context.Database.BeginTransactionAsync();
         try
         {
             Log.Information("Deleting car");
-            var car = await context.Cars.FirstOrDefaultAsync(x => x.Id == id);
-            if(car == null) return new Responce<string>(HttpStatusCode.NotFound,"Car not found");
-            context.Cars.Remove(car);
+            var car = await context.Cars.FirstOrDefaultAsync(x => x.Id == id &&  !x.IsDeleted);
+            
+            if(car == null) 
+                return new Responce<string>(HttpStatusCode.NotFound,"Car not found");
+            
+            if (!string.IsNullOrEmpty(car.ImagePath))
+                await file.DeleteFile(car.ImagePath);
+            
+            car.IsDeleted = true;
+            car.UpdatedDate = DateTime.UtcNow;
             var res = await context.SaveChangesAsync();
+            
+            await transaction.CommitAsync();
             return res > 0
                 ? new Responce<string>(HttpStatusCode.OK,"Car deleted successfully")
                 : new Responce<string>(HttpStatusCode.BadRequest,"Error");
         }
         catch (Exception e)
         {
+            await transaction.RollbackAsync();
             Log.Error("Error in deleting car");
             return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
-
+    #endregion
+    
+    #region GetCar
     public async Task<Responce<GetCarDto>> GetCarById(int id)
     {
         try
         {
             Log.Information("Getting car");
-            var car = await context.Cars.FirstOrDefaultAsync(x => x.Id == id);
-            if(car == null) return new Responce<GetCarDto>(HttpStatusCode.NotFound,"Car not found");
-            var res = new GetCarDto()
-            {
-                Id = car.Id,
-                Brand = car.Brand,
-                Model = car.Model,
-                Year = car.Year,
-                DailyPrice = car.DailyPrice,
-                ImagePath = car.ImagePath,
-                IsAvailable = car.IsAvailable,
-                CreatedDate = car.CreatedDate,
-                UpdatedDate = car.UpdatedDate,
-            };
-            return new Responce<GetCarDto>(res);
+            var car = await context.Cars
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+            
+            if(car == null) 
+                return new Responce<GetCarDto>(HttpStatusCode.NotFound,"Car not found");
+            
+            return new Responce<GetCarDto>(MapToDto(car));
         }
         catch (Exception e)
         {
@@ -128,7 +224,9 @@ public class CarService(DataContext context,
             return new Responce<GetCarDto>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
-
+    #endregion
+    
+    #region GetCars
     public async Task<PaginationResponce<List<GetCarDto>>> GetCars(CarFilter filter)
     {
         try
@@ -168,21 +266,17 @@ public class CarService(DataContext context,
             query = query.Where(x => x.IsDeleted == false);
             var total = await query.CountAsync();
             var skip = (filter.PageNumber - 1) * filter.PageSize;
-            var cars = await query.Skip(skip).Take(filter.PageSize).ToListAsync();
-            if(cars.Count ==  0) return new PaginationResponce<List<GetCarDto>>(HttpStatusCode.NotFound,"Cars not found");
-            var dtos = cars.Select(x=> new  GetCarDto()
-            {
-                Id = x.Id,
-                Brand = x.Brand,
-                Model = x.Model,
-                Year = x.Year,
-                DailyPrice = x.DailyPrice,
-                ImagePath = x.ImagePath,
-                IsAvailable = x.IsAvailable,
-                CreatedDate = x.CreatedDate,
-                UpdatedDate = x.UpdatedDate,
-            }).ToList();
-            return new PaginationResponce<List<GetCarDto>>(dtos, total,filter.PageNumber, filter.PageSize);
+            var cars = await query.Skip(skip)
+                .Take(filter.PageSize)
+                .AsNoTracking()
+                .ToListAsync();
+            if(cars.Count ==  0) 
+                return new PaginationResponce<List<GetCarDto>>(HttpStatusCode.NotFound,"Cars not found");
+            
+            var result = cars.Select(MapToDto).ToList();
+            
+            return new PaginationResponce<List<GetCarDto>>(result, total,  filter.PageNumber, filter.PageSize);
+
         }
         catch (Exception e)
         {
@@ -190,4 +284,5 @@ public class CarService(DataContext context,
             return new PaginationResponce<List<GetCarDto>>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
+    #endregion
 }

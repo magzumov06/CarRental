@@ -7,6 +7,7 @@ namespace Infrastructure.Interfaces;
 public interface ICarService
 {
     Task<Responce<string>> AddCar(AddCarDto dto);
+    Task<Responce<string>> AddCars(List<AddCarDto> dtos);
     Task<Responce<string>> UpdateCar(UpdateCarDto dto);
     Task<Responce<string>> DeleteCar(int id);
     Task<Responce<GetCarDto>> GetCarById(int id);

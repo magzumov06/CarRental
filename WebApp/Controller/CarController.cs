@@ -17,6 +17,17 @@ public class CarController(ICarService service) : ControllerBase
         return StatusCode((int)res.StatusCode, res);
     }
 
+    [HttpPost("AddRange")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AddCars([FromBody] List<AddCarDto> dtos)
+    {
+        if (dtos == null || dtos.Count == 0)
+            return BadRequest("Car list is empty");
+
+        var res = await service.AddCars(dtos);
+        return StatusCode((int)res.StatusCode, res);
+    }
+    
     [HttpPut]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateCar([FromForm] UpdateCarDto dto)
