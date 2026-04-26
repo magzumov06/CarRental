@@ -202,6 +202,58 @@ public class CarService(DataContext context,
         }
     }
     #endregion
+
+    #region DeleteCars
+    public async Task<Responce<string>> DeleteCars(List<int> ids)
+    {
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var cars = await context.Cars
+                .Where(x => ids.Contains(x.Id) && !x.IsDeleted)
+                .ToListAsync();
+
+            var foundIds = cars.Select(x => x.Id).ToList();
+            var notFoundIds = ids.Except(foundIds).ToList();
+
+            if (cars.Count == 0)
+                return new Responce<string>(HttpStatusCode.NotFound, "Cars not found");
+
+            var filePaths = cars
+                .Where(x => !string.IsNullOrEmpty(x.ImagePath))
+                .Select(x => x.ImagePath)
+                .ToList();
+
+            foreach (var car in cars)
+            {
+                car.IsDeleted = true;
+                car.UpdatedDate = DateTime.UtcNow;
+            }
+
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            foreach (var path in filePaths)
+            {
+                await file.DeleteFile(path);
+            }
+
+            var message = $"Deleted: {cars.Count}";
+            if (notFoundIds.Any())
+                message += $", Not found: {string.Join(",", notFoundIds)}";
+
+            return new Responce<string>(HttpStatusCode.OK, message);
+        }
+        catch (Exception e)
+        {
+            await transaction.RollbackAsync();
+            Log.Error(e, "Error while deleting multiple cars");
+
+            return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
+        }
+    }
+    #endregion
     
     #region GetCar
     public async Task<Responce<GetCarDto>> GetCarById(int id)

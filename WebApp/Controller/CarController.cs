@@ -18,8 +18,7 @@ public class CarController(ICarService service) : ControllerBase
     }
 
     [HttpPost("AddRange")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> AddCars([FromBody] List<AddCarDto> dtos)
+    public async Task<IActionResult> AddCars([FromForm] List<AddCarDto> dtos)
     {
         if (dtos == null || dtos.Count == 0)
             return BadRequest("Car list is empty");
@@ -29,15 +28,24 @@ public class CarController(ICarService service) : ControllerBase
     }
     
     [HttpPut]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateCar([FromForm] UpdateCarDto dto)
     {
         var res = await service.UpdateCar(dto);
         return StatusCode((int)res.StatusCode, res);
     }
 
+    [HttpDelete("bulk")]
+    public async Task<IActionResult> DeleteCars([FromBody] List<int> ids)
+    {
+        if (ids == null || ids.Count == 0)
+            return BadRequest("Ids list is empty");
+
+        var res = await service.DeleteCars(ids);
+        return StatusCode((int)res.StatusCode, res);
+    }
+    
+    
     [HttpDelete]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
         var res = await service.DeleteCar(id);
