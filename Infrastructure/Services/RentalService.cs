@@ -13,9 +13,10 @@ namespace Infrastructure.Services;
 
 public class RentalService(DataContext context) : IRentalService
 {
-    
+    #region CreatRental
     public async Task<Responce<string>> CreateRental(CreateRentalDto dto, int  userId)
     {
+        await using var transaction = await context.Database.BeginTransactionAsync();
         try
         {
             Log.Information("Creating rental");
@@ -39,6 +40,9 @@ public class RentalService(DataContext context) : IRentalService
             if (hasConflict)
                 return new Responce<string>(HttpStatusCode.BadRequest, "Car already rented for this period");
 
+            if(dto.StartDate < DateTime.UtcNow.Date)
+                return new Responce<string>(HttpStatusCode.BadRequest, "Invalid rental start");
+            
             var days = (dto.EndDate - dto.StartDate).TotalDays;
             if (days < 1) days = 1;
 
@@ -55,18 +59,22 @@ public class RentalService(DataContext context) : IRentalService
                 CreatedDate = DateTime.UtcNow,
                 UpdatedDate = DateTime.UtcNow
             };
+            
             await context.Rentals.AddAsync(rental);
             await context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return new Responce<string>(HttpStatusCode.Created, "Rental created successfully");
         }
         catch (Exception e)
         {
+            await transaction.RollbackAsync();
             Log.Error(e, "Error creating rental for UserId {userId}", userId);
             return new Responce<string>(HttpStatusCode.InternalServerError, "Internal server error");
         }
     }
-    
-    
+    #endregion
+
+    #region UpdateRental
     public async Task<Responce<string>> UpdateRental(UpdateRentalDto dto, int userId)
     {
         try
@@ -116,7 +124,9 @@ public class RentalService(DataContext context) : IRentalService
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
-
+    #endregion
+    
+    #region DeleteRental
     public async Task<Responce<string>> DeleteRental(int id, int userId)
     {
         try
@@ -138,7 +148,9 @@ public class RentalService(DataContext context) : IRentalService
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
-
+    #endregion
+    
+    #region GetRental
     public async Task<Responce<GetRentalDto>> GetRental(int id)
     {
         try
@@ -167,7 +179,9 @@ public class RentalService(DataContext context) : IRentalService
             return new Responce<GetRentalDto>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
+    #endregion
 
+    #region GetRentals
     public async Task<PaginationResponce<List<GetRentalDto>>> GetRentals(RentalFilter filter)
     {
         try
@@ -216,7 +230,50 @@ public class RentalService(DataContext context) : IRentalService
             return new PaginationResponce<List<GetRentalDto>>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
+    #endregion
+
+    #region GetRentalByUserId
+
     
+
+    public async Task<PaginationResponce<List<GetRentalDto>>> GetRentalByUserId(int userId, int pageNumber = 1, int pageSize = 10)
+    {
+        try
+        {
+            var query = context.Rentals
+                .Where(x => x.UserId == userId && !x.IsDeleted)
+                .AsNoTracking();
+
+            var total = await query.CountAsync();
+
+            var rentals = await query
+                .OrderByDescending(x => x.CreatedDate)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var result = rentals.Select(x => new GetRentalDto
+            {
+                Id = x.Id,
+                CarId = x.CarId,
+                UserId = x.UserId,
+                StartDate = x.StartDate,
+                EndDate = x.EndDate,
+                TotalPrice = x.TotalPrice,
+                Status = x.Status,
+                CreatedDate = x.CreatedDate,
+                UpdatedDate = x.UpdatedDate
+            }).ToList();
+
+            return new PaginationResponce<List<GetRentalDto>>(result, total, pageNumber, pageSize);
+        }
+        catch (Exception e)
+        {
+            return new PaginationResponce<List<GetRentalDto>>(HttpStatusCode.InternalServerError, e.Message);
+        }
+    }
+    #endregion
+    #region CompleteRental
     public async Task MarkExpiredRentalsAsCompleted()
     {
         var now = DateTime.UtcNow;
@@ -228,4 +285,5 @@ public class RentalService(DataContext context) : IRentalService
                 .SetProperty(x  => x.UpdatedDate, DateTime.UtcNow)
             );
     }
+    #endregion
 }

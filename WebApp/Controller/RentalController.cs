@@ -64,4 +64,20 @@ public class RentalController(IRentalService service) :  ControllerBase
         var res =  await service.GetRentals(filter);
         return StatusCode((int)res.StatusCode, res);
     }
+    
+    [HttpGet("me")]
+    public async Task<IActionResult> GetRentalByUserId(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var userClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        if (userClaim == null)
+            return Unauthorized("User not Authorized");
+        
+        var userId = int.Parse(userClaim);
+        
+        var res = await service.GetRentalByUserId(userId, pageNumber, pageSize);
+        return StatusCode((int)res.StatusCode, res);
+    }
 }
