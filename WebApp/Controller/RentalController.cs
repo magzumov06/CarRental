@@ -65,7 +65,8 @@ public class RentalController(IRentalService service) :  ControllerBase
         return StatusCode((int)res.StatusCode, res);
     }
     
-    [HttpGet("me")]
+    [HttpGet("my-rentals")]
+    [Authorize]
     public async Task<IActionResult> GetRentalByUserId(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10)

@@ -39,6 +39,9 @@ builder.Services.RegisterIdentity();
 //Swagger
 builder.Services.RegisterSwagger();
 
+builder.Services.RegisterJwt(builder.Configuration);
+
+
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<IFileStorage>(sp => new FileStorage(builder.Environment.ContentRootPath));
@@ -59,10 +62,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.MapControllers();
 
-app.UseAuthorization();
-app.UseAuthentication();
+app.UseAuthentication(); 
+app.UseAuthorization(); 
+
+app.MapControllers();
 
 app.UseHangfireDashboard("/hangfire");
 

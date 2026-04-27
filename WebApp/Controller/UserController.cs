@@ -10,6 +10,7 @@ namespace WebApp.Controller;
 public class UserController(IUserService service) : ControllerBase
 {
     [HttpPut]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateUser([FromForm]UpdateUserDto dto)
     {
         var res =  await service.UpdateUser(dto);
@@ -17,6 +18,7 @@ public class UserController(IUserService service) : ControllerBase
     }
 
     [HttpDelete]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteUser(int id)
     {
         var res = await service.DeleteUser(id);
@@ -24,6 +26,7 @@ public class UserController(IUserService service) : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetUser(int id)
     {
         var res = await service.GetUserById(id);
@@ -31,6 +34,7 @@ public class UserController(IUserService service) : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetUsers([FromQuery]UserFilter filter)
     {
         var res = await service.GetAllUsers(filter);

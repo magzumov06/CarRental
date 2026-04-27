@@ -11,6 +11,7 @@ namespace WebApp.Controller;
 public class CarController(ICarService service) : ControllerBase
 {
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AddCar([FromForm] AddCarDto dto)
     {
         var res =  await service.AddCar(dto);
@@ -18,6 +19,7 @@ public class CarController(ICarService service) : ControllerBase
     }
 
     [HttpPost("AddRange")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AddCars([FromForm] List<AddCarDto> dtos)
     {
         if (dtos == null || dtos.Count == 0)
@@ -28,6 +30,7 @@ public class CarController(ICarService service) : ControllerBase
     }
     
     [HttpPut]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateCar([FromForm] UpdateCarDto dto)
     {
         var res = await service.UpdateCar(dto);
@@ -35,6 +38,7 @@ public class CarController(ICarService service) : ControllerBase
     }
 
     [HttpDelete("bulk")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteCars([FromBody] List<int> ids)
     {
         if (ids == null || ids.Count == 0)
@@ -46,6 +50,7 @@ public class CarController(ICarService service) : ControllerBase
     
     
     [HttpDelete]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
         var res = await service.DeleteCar(id);
@@ -53,6 +58,7 @@ public class CarController(ICarService service) : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize]
     public async Task<IActionResult> GetCar(int id)
     {
         var res = await service.GetCarById(id);
@@ -60,6 +66,7 @@ public class CarController(ICarService service) : ControllerBase
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> GetCars([FromQuery]CarFilter filter)
     {
         var res = await service.GetCars(filter);
