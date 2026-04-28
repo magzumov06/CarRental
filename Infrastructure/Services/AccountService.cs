@@ -24,6 +24,8 @@ public class AccountService(
     IFileStorage file
     ) :  IAccountService
 {
+
+    #region Register
     public async Task<Responce<string>> RegisterAsync(Register register)
     {
         try
@@ -64,24 +66,61 @@ public class AccountService(
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
         }    
     }
+    #endregion
+    
+    #region Login
     public async Task<Responce<string>> LoginAsync(Login login)
     {
         try
         {
             var user = await userManager.FindByNameAsync(login.UserName);
-            if (user == null)
-                return new Responce<string>(HttpStatusCode.NotFound, "Номи корбар ё рамз нодуруст аст");
+            
+            switch (user)
+            {
+                case { IsDeleted: true }:
+                    return new Responce<string>(HttpStatusCode.NotFound,"User not found");
+               
+                case null:
+                    return new Responce<string>(HttpStatusCode.Unauthorized,"UserName or Password is incorrect");
+            }
+            
+            if (await userManager.IsLockedOutAsync(user))
+            {
+                var lockEnd = await userManager.GetLockoutEndDateAsync(user);
+                
+                var remaining = lockEnd.Value.UtcDateTime - DateTime.UtcNow;
+               
+                return new Responce<string>(
+                    HttpStatusCode.Unauthorized, 
+                    $"Account locked.Try again in {remaining.Minutes} minutes and {remaining.Seconds} seconds");
+
+            }
             var isPasswordValid = await userManager.CheckPasswordAsync(user, login.Password);
             if (!isPasswordValid)
-                return new Responce<string>(HttpStatusCode.BadRequest, "Номи корбар ё рамз нодуруст аст");
+            {
+                await userManager.AccessFailedAsync(user);
+                
+                int attemptsLeft = 5 - await userManager.GetAccessFailedCountAsync(user);
+                
+                string message =  attemptsLeft > 0
+                    ? $"Incorrect password. {attemptsLeft} attempts left."
+                    : "Account locked due to too many failed attempts.";
+                
+                return new Responce<string>(HttpStatusCode.Unauthorized, message);
+            }
+            await userManager.ResetAccessFailedCountAsync(user);
+            
             var token = await GenerateJwtTokenHelper.GenerateJwtToken(user, userManager, configuration);
             return new Responce<string>(token) { Message = "Воридшавӣ бо муваффақият анҷом ёфт" };
         }
         catch (Exception e)
         {
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
-        }    }
-
+        }
+    }
+    #endregion
+    
+    #region ChangePassword 
     public async Task<Responce<string>> ChangePassword(ChangePassword changePassword)
     {
         try
@@ -100,4 +139,6 @@ public class AccountService(
             return new Responce<string>(HttpStatusCode.InternalServerError,e.Message);
         }
     }
+    #endregion
+    
 }

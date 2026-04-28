@@ -18,6 +18,9 @@ public static class IdentityRegister
                 opt.Password.RequireLowercase = false;
                 opt.Password.RequireDigit = false;
                 opt.User.RequireUniqueEmail = true;
+                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+                opt.Lockout.MaxFailedAccessAttempts = 5;
+                opt.Lockout.AllowedForNewUsers = true;
             })
             .AddRoles<IdentityRole<int>>()
             .AddEntityFrameworkStores<DataContext>()

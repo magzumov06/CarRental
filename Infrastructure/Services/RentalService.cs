@@ -13,6 +13,25 @@ namespace Infrastructure.Services;
 
 public class RentalService(DataContext context) : IRentalService
 {
+    
+    #region MAPPER
+    private static GetRentalDto MapToDto(Rental r)
+    {
+        return new GetRentalDto()
+        {
+            Id = r.Id,
+            CarId = r.CarId,
+            UserId = r.UserId,
+            StartDate = r.StartDate,
+            EndDate = r.EndDate,
+            TotalPrice = r.TotalPrice,
+            Status = r.Status,
+            CreatedDate = r.CreatedDate,
+            UpdatedDate = r.UpdatedDate
+        };
+    }
+    #endregion
+    
     #region CreatRental
     public async Task<Responce<string>> CreateRental(CreateRentalDto dto, int  userId)
     {
@@ -81,7 +100,7 @@ public class RentalService(DataContext context) : IRentalService
         {
             Log.Information("Updating rental");
             
-            var rental = await context.Rentals.FirstOrDefaultAsync(x=> x.Id == dto.Id);
+            var rental = await context.Rentals.FirstOrDefaultAsync(x=> x.Id == dto.Id && !x.IsDeleted);
             
             if (rental == null) 
                 return new Responce<string>(HttpStatusCode.NotFound, "Rental not found");
@@ -132,7 +151,7 @@ public class RentalService(DataContext context) : IRentalService
         try
         {
             Log.Information("Deleting rental");
-            var rental = await context.Rentals.FirstOrDefaultAsync(x => x.Id == id);
+            var rental = await context.Rentals.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
             if (rental == null) return new Responce<string>(HttpStatusCode.NotFound, "Rental not found");
             rental.IsDeleted = true;
             rental.UpdatedDate = DateTime.UtcNow;
@@ -157,21 +176,11 @@ public class RentalService(DataContext context) : IRentalService
         {
             Log.Information("Getting rental");
             var rental = await context.Rentals.FirstOrDefaultAsync(x => x.Id == id && x.IsDeleted == false);
+            
             if(rental == null)  
                 return new Responce<GetRentalDto>(HttpStatusCode.NotFound, "Rental not found");
-            var dto = new GetRentalDto()
-            {
-                Id = rental.Id,
-                CarId = rental.CarId,
-                UserId = rental.UserId,
-                StartDate = rental.StartDate,
-                EndDate = rental.EndDate,
-                TotalPrice = rental.TotalPrice,
-                Status = rental.Status,
-                CreatedDate = rental.CreatedDate,
-                UpdatedDate = rental.UpdatedDate,
-            };
-            return new Responce<GetRentalDto>(dto);
+
+            return new Responce<GetRentalDto>(MapToDto(rental));
         }
         catch (Exception e)
         {
@@ -206,24 +215,21 @@ public class RentalService(DataContext context) : IRentalService
             {
                 query = query.Where(x => x.Status == filter.Status.Value);
             }
+            
             query = query.Where(x => x.IsDeleted == false);
+            
             var total = await query.CountAsync();
+            
             var skip = (filter.PageNumber - 1) * filter.PageSize;
+            
             var rental = await query.OrderBy(x => x.Id).Skip(skip).Take(filter.PageSize).ToListAsync();
-            if(rental.Count == 0) return new PaginationResponce<List<GetRentalDto>>(HttpStatusCode.NotFound, "Rental not found");
-            var dtos = rental.Select(x => new GetRentalDto()
-            {
-                Id = x.Id,
-                CarId = x.CarId,
-                UserId = x.UserId,
-                StartDate = x.StartDate,
-                EndDate = x.EndDate,
-                TotalPrice = x.TotalPrice,
-                Status = x.Status,
-                CreatedDate = x.CreatedDate,
-                UpdatedDate = x.UpdatedDate,
-            }).ToList();
-            return new PaginationResponce<List<GetRentalDto>>(dtos,total,filter.PageNumber,filter.PageSize);
+            
+            if(rental.Count == 0) 
+                return new PaginationResponce<List<GetRentalDto>>(HttpStatusCode.NotFound, "Rental not found");
+            
+            var res = rental.Select(MapToDto).ToList();
+            
+            return new PaginationResponce<List<GetRentalDto>>(res,total,filter.PageNumber,filter.PageSize);
         }
         catch (Exception e)
         {
@@ -233,16 +239,13 @@ public class RentalService(DataContext context) : IRentalService
     #endregion
 
     #region GetRentalByUserId
-
-    
-
     public async Task<PaginationResponce<List<GetRentalDto>>> GetRentalByUserId(int userId, int pageNumber = 1, int pageSize = 10)
     {
         try
         {
             var query = context.Rentals
-                .Where(x => x.UserId == userId && !x.IsDeleted)
-                .AsNoTracking();
+                .AsNoTracking()
+                .Where(x => x.UserId == userId && !x.IsDeleted);
 
             var total = await query.CountAsync();
 
@@ -252,19 +255,8 @@ public class RentalService(DataContext context) : IRentalService
                 .Take(pageSize)
                 .ToListAsync();
 
-            var result = rentals.Select(x => new GetRentalDto
-            {
-                Id = x.Id,
-                CarId = x.CarId,
-                UserId = x.UserId,
-                StartDate = x.StartDate,
-                EndDate = x.EndDate,
-                TotalPrice = x.TotalPrice,
-                Status = x.Status,
-                CreatedDate = x.CreatedDate,
-                UpdatedDate = x.UpdatedDate
-            }).ToList();
-
+            var result = rentals.Select(MapToDto).ToList();
+            
             return new PaginationResponce<List<GetRentalDto>>(result, total, pageNumber, pageSize);
         }
         catch (Exception e)
@@ -273,6 +265,7 @@ public class RentalService(DataContext context) : IRentalService
         }
     }
     #endregion
+    
     #region CompleteRental
     public async Task MarkExpiredRentalsAsCompleted()
     {
@@ -286,4 +279,5 @@ public class RentalService(DataContext context) : IRentalService
             );
     }
     #endregion
+    
 }

@@ -10,6 +10,7 @@ public class User : IdentityUser<int>
     public required string FullName { get; set; }
     public override required string Email { get; set; }
     public string? ProfilePicture { get; set; }
+    public bool IsDeleted { get; set; }
     public DateTime CreatedDate { get; set; }
     public DateTime UpdatedDate { get; set; }
     public List<Rental>? Rentals { get; set; }

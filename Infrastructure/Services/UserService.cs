@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Domain.DTOs.UserDto;
+using Domain.Entities;
 using Domain.Filters;
 using Domain.Responces;
 using Infrastructure.Data;
@@ -13,14 +14,30 @@ namespace Infrastructure.Services;
 public class UserService(DataContext context,
     IFileStorage file) : IUserService
 {
+    
+    #region MAPPER
+    private static GetUserDto MapToDto(User u)
+    {
+        return new GetUserDto
+        {
+            Id = u.Id,
+            FullName = u.FullName,
+            Email = u.Email,
+            ProfilePicture = u.ProfilePicture,
+            CreatedDate = u.CreatedDate,
+            UpdatedDate = u.UpdatedDate
+        };
+    }
+    #endregion
+    
+    #region UpdateUser
     public async Task<Responce<string>> UpdateUser(UpdateUserDto dto)
     {
         try
         {
-            var user = await context.Users.FirstOrDefaultAsync(x=>x.Id == dto.Id);
+            var user = await context.Users.FirstOrDefaultAsync(x=>x.Id == dto.Id && !x.IsDeleted);
             if(user == null) return new Responce<string>(HttpStatusCode.NotFound, "User not found");
             dto.FullName = user.FullName;
-            dto.Email = user.Email;
             if (dto.ProfilePicture != null)
             {
                 if (!string.IsNullOrEmpty(user.ProfilePicture))
@@ -39,14 +56,16 @@ public class UserService(DataContext context,
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
+    #endregion
     
+    #region DeleteUser
     public async Task<Responce<string>> DeleteUser(int id)
     {
         try
         {
-            var user = await context.Users.FirstOrDefaultAsync(x => x.Id == id);
+            var user = await context.Users.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
             if(user == null) return new Responce<string>(HttpStatusCode.NotFound, "User not found");
-            context.Users.Remove(user);
+            user.IsDeleted = true;
             var res = await context.SaveChangesAsync();
             return res > 0
                 ? new Responce<string>(HttpStatusCode.OK, "User successfully deleted")
@@ -57,30 +76,30 @@ public class UserService(DataContext context,
             return new Responce<string>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
+    #endregion
 
+    #region GetUserById
     public async Task<Responce<GetUserDto>> GetUserById(int id)
     {
         try
         {
-            var user = await context.Users.FirstOrDefaultAsync(x => x.Id == id);
-            if(user == null) return new Responce<GetUserDto>(HttpStatusCode.NotFound, "User not found");
-            var dto = new GetUserDto()
-            {
-                Id = user.Id,
-                FullName = user.FullName,
-                Email = user.Email,
-                ProfilePicture = user.ProfilePicture,
-                CreatedDate = user.CreatedDate,
-                UpdatedDate = user.UpdatedDate
-            };
-            return new Responce<GetUserDto>(dto);
+            var user =await context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x=> x.Id == id && !x.IsDeleted);
+            
+            if (user == null)
+                return new Responce<GetUserDto>(HttpStatusCode.NotFound, "User not found");
+            
+            return new Responce<GetUserDto>(MapToDto(user));
         }
         catch (Exception e)
         {
             return new Responce<GetUserDto>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
+    #endregion
 
+    #region GetUsers
     public async Task<PaginationResponce<List<GetUserDto>>> GetAllUsers(UserFilter filter)
     {
         try
@@ -100,25 +119,30 @@ public class UserService(DataContext context,
             {
                 query = query.Where(x => x.Email.Contains(filter.Email));
             }
+            
+            query = query.Where(x => !x.IsDeleted);
+            
             var total = await query.CountAsync();
+            
             var skip = (filter.PageNumber - 1) * filter.PageSize;
-            var users = await query.OrderBy(x => x.Id).Skip(skip).Take(filter.PageSize).ToListAsync();
+            
+            var users = await query.OrderBy(x => x.Id)
+                .Skip(skip)
+                .Take(filter.PageSize)
+                .AsNoTracking()
+                .ToListAsync();
+            
             if (users.Count == 0)
                 return new PaginationResponce<List<GetUserDto>>(HttpStatusCode.NotFound, "User not found");
-            var dtos = users.Select(x=> new GetUserDto()
-            {
-                Id = x.Id,
-                FullName = x.FullName,
-                Email = x.Email,
-                ProfilePicture = x.ProfilePicture,
-                CreatedDate = x.CreatedDate,
-                UpdatedDate = x.UpdatedDate
-            }).ToList();
-            return new PaginationResponce<List<GetUserDto>>(dtos, total,filter.PageNumber, filter.PageSize);
+            
+            var res = users.Select(MapToDto).ToList();
+            return new PaginationResponce<List<GetUserDto>>(res, total,filter.PageNumber, filter.PageSize);
         }
         catch (Exception e)
         {
             return new PaginationResponce<List<GetUserDto>>(HttpStatusCode.InternalServerError, e.Message);
         }
     }
+    #endregion
+    
 }
