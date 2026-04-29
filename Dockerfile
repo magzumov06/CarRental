@@ -2,12 +2,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# copy csproj
-COPY *.csproj .
-RUN dotnet restore
-
-# copy all
+# copy everything (fix for project structure issues)
 COPY . .
+
+# change to project folder (АГАР НОМИ FOLDER ҲАСТ)
+# WORKDIR /src/WebApp
+
+RUN dotnet restore
 RUN dotnet publish -c Release -o /app/publish
 
 # 🚀 Runtime stage
@@ -16,9 +17,7 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-# муҳим барои Render (PORT)
-ENV ASPNETCORE_URLS=http://+:$PORT
-
-EXPOSE 10000
+# Render uses dynamic PORT
+ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT}
 
 ENTRYPOINT ["dotnet", "WebApp.dll"]
