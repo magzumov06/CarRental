@@ -80,11 +80,10 @@ app.MapControllers();
 #endregion
 
 #region 📚 SWAGGER (DEV ONLY)
-if (app.Environment.IsDevelopment())
-{
+
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+
 #endregion
 
 #region 🔥 HANGFIRE DASHBOARD (SECURED)
