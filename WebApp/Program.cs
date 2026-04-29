@@ -40,6 +40,7 @@ builder.Services.RegisterJwt(builder.Configuration);
 #region 📚 SWAGGER
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.RegisterSwagger();
 #endregion
 
 #region ⚙️ SERVICES
