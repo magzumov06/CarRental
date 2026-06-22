@@ -94,13 +94,13 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 });
 #endregion
 
-#region ⏰ BACKGROUND JOBS
-RecurringJob.AddOrUpdate<IRentalService>(
-    "complete-expired-rentals",
-    x => x.MarkExpiredRentalsAsCompleted(),
-    Cron.Daily(8)
-);
-#endregion
+// #region ⏰ BACKGROUND JOBS
+// RecurringJob.AddOrUpdate<IRentalService>(
+//     "complete-expired-rentals",
+//     x => x.MarkExpiredRentalsAsCompleted(),
+//     Cron.Daily(8)
+// );
+// #endregion
 
 #region 🗄️ DB MIGRATION + SEED
 using (var scope = app.Services.CreateScope())

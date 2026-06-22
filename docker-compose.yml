@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: postgres:16
+    container_name: carrental-db
+    environment:
+      POSTGRES_DB: car_rental_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5432:5432"
+
+  api:
+    build: .
+    container_name: carrental-api
+    depends_on:
+      - db
+    ports:
+      - "5001:80"
+    environment:
+      ASPNETCORE_URLS: "http://+:80"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=car_rental_db;Username=postgres;Password=1234"
